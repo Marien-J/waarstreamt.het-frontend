@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -27,9 +28,9 @@
     --font-body: 'Nunito', sans-serif;
   }
 
-  html, body { height: 100%; background: var(--bg); font-family: var(--font-body); color: var(--deep); }
+  html, body { height: 100%; background: #e8ddd0; font-family: var(--font-body); color: var(--deep); }
 
-  /* ── Layout shell ──────────────────────────────────────────── */
+  /* ── App shell ─────────────────────────────────────────────── */
   #app {
     max-width: 420px;
     margin: 0 auto;
@@ -39,6 +40,45 @@
     background: var(--bg);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.18);
+  }
+
+  /* ── Loading overlay ───────────────────────────────────────── */
+  #loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    gap: 14px;
+    transition: opacity 0.3s;
+  }
+  #loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+  .loading-logo {
+    font-family: var(--font-title);
+    font-size: 28px;
+    color: var(--deep);
+    letter-spacing: 0.5px;
+  }
+  .loading-spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--mint);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-msg { font-size: 13px; color: var(--muted); }
+  #loading-error {
+    display: none;
+    font-size: 12px;
+    color: var(--terra);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.5;
   }
 
   /* ── Top bar ───────────────────────────────────────────────── */
@@ -59,17 +99,12 @@
     color: var(--deep);
     cursor: pointer;
     user-select: none;
-    letter-spacing: 0.3px;
   }
   #topbar-logo:hover { color: var(--mint); }
   #settings-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
+    background: none; border: none; cursor: pointer;
+    padding: 6px; border-radius: 50%;
+    display: flex; align-items: center;
     color: var(--muted);
     transition: background 0.15s, color 0.15s;
   }
@@ -77,10 +112,10 @@
   #settings-btn svg { width: 22px; height: 22px; }
 
   /* ── Screens ────────────────────────────────────────────────── */
-  .screen { display: none; flex: 1; overflow-y: auto; }
+  .screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; }
   .screen.active { display: flex; flex-direction: column; }
 
-  /* ── Bottom tab bar ─────────────────────────────────────────── */
+  /* ── Tab bar ─────────────────────────────────────────────────── */
   #tabbar {
     display: flex;
     background: var(--surface);
@@ -89,63 +124,34 @@
     height: 64px;
   }
   .tab-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: none;
-    border: none;
-    cursor: pointer;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none; cursor: pointer;
     color: var(--muted);
-    font-family: var(--font-body);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    transition: color 0.15s;
-    padding: 8px 0;
+    font-family: var(--font-body); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.3px; transition: color 0.15s; padding: 8px 0;
   }
-  .tab-btn svg { width: 22px; height: 22px; transition: stroke 0.15s, fill 0.15s; }
+  .tab-btn svg { width: 22px; height: 22px; }
   .tab-btn.active { color: var(--mint); }
-  .tab-btn.active svg { stroke: var(--mint); }
 
   /* ── Search screen ──────────────────────────────────────────── */
   #search-screen { padding: 28px 20px 16px; }
-
-  .search-hero {
-    text-align: center;
-    margin-bottom: 32px;
-  }
+  .search-hero { text-align: center; margin-bottom: 32px; }
   .search-hero .tagline {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: var(--mint);
-    margin-bottom: 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--mint); margin-bottom: 8px;
   }
   .search-hero h1 {
-    font-family: var(--font-title);
-    font-size: 52px;
-    line-height: 1.05;
-    color: var(--deep);
-    margin-bottom: 8px;
+    font-family: var(--font-title); font-size: 52px;
+    line-height: 1.05; color: var(--deep); margin-bottom: 8px;
   }
-  .search-hero .sub {
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 400;
-  }
+  .search-hero .sub { font-size: 13px; color: var(--muted); }
 
   .search-wrap { position: relative; }
   .search-input-row {
-    display: flex;
-    align-items: center;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0 14px;
+    display: flex; align-items: center;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 0 14px;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .search-input-row:focus-within {
@@ -154,319 +160,205 @@
   }
   .search-input-row svg { width: 18px; height: 18px; stroke: var(--mint); flex-shrink: 0; }
   #search-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-family: var(--font-body);
-    font-size: 15px;
-    color: var(--deep);
+    flex: 1; border: none; outline: none; background: transparent;
+    font-family: var(--font-body); font-size: 15px; color: var(--deep);
     padding: 12px 10px;
   }
   #search-input::placeholder { color: var(--muted); }
 
   #suggestions {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0; right: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    z-index: 20;
-    overflow: hidden;
+    display: none; position: absolute;
+    top: calc(100% + 8px); left: 0; right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    z-index: 30; overflow: hidden; max-height: 360px; overflow-y: auto;
   }
   #suggestions.visible { display: block; }
-
   .suggestion-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: background 0.12s;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; cursor: pointer; transition: background 0.12s;
   }
   .suggestion-row:hover { background: var(--surface2); }
   .suggestion-row + .suggestion-row { border-top: 1px solid var(--border); }
-
   .sug-thumb {
-    width: 36px;
-    height: 50px;
-    background: var(--surface2);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
+    width: 34px; height: 50px; background: var(--surface2);
+    border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; flex-shrink: 0; overflow: hidden;
   }
+  .sug-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .sug-info { flex: 1; min-width: 0; }
   .sug-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--deep);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 14px; font-weight: 600; color: var(--deep);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .sug-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
   .search-hint {
-    text-align: center;
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 32px;
-    opacity: 0.6;
+    text-align: center; font-size: 12px;
+    color: var(--muted); margin-top: 32px; opacity: 0.6;
   }
 
   /* ── Placeholder screens ─────────────────────────────────────── */
   .placeholder-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px 24px;
-    gap: 14px;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 40px 24px; gap: 14px;
   }
   .placeholder-screen h1 {
-    font-family: var(--font-title);
-    font-size: 42px;
-    line-height: 1.05;
-    color: var(--deep);
+    font-family: var(--font-title); font-size: 42px;
+    line-height: 1.05; color: var(--deep);
   }
-  .placeholder-screen p {
-    font-size: 14px;
-    color: var(--muted);
-  }
+  .placeholder-screen p { font-size: 14px; color: var(--muted); }
 
   /* ── Settings screen ─────────────────────────────────────────── */
-  #settings-screen { padding: 24px 20px; gap: 0; }
-
+  #settings-screen { padding: 24px 20px; }
   .settings-section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--terra);
-    margin-bottom: 14px;
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--terra); margin-bottom: 14px;
   }
-  .settings-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 24px 0;
-  }
-
+  .settings-divider { height: 1px; background: var(--border); margin: 24px 0; }
   .setting-field { margin-bottom: 16px; }
   .setting-field label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-bottom: 6px;
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--muted); margin-bottom: 6px;
   }
   .setting-field select {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
     background: var(--surface);
-    font-family: var(--font-body);
-    font-size: 14px;
-    color: var(--deep);
+    font-family: var(--font-body); font-size: 14px; color: var(--deep);
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a9089' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
+    background-repeat: no-repeat; background-position: right 12px center;
+    cursor: pointer; outline: none; transition: border-color 0.2s;
   }
-  .setting-field select:focus { border-color: var(--mint); box-shadow: 0 0 0 3px rgba(91,191,154,0.15); }
-
-  .service-list { display: flex; flex-direction: column; gap: 2px; }
+  .setting-field select:focus {
+    border-color: var(--mint);
+    box-shadow: 0 0 0 3px rgba(91,191,154,0.15);
+  }
+  .service-list { display: flex; flex-direction: column; }
   .service-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 4px;
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 4px; border-bottom: 1px solid var(--border);
   }
   .service-row:last-child { border-bottom: none; }
   .service-name { font-size: 14px; font-weight: 500; color: var(--deep); }
-
   .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
   .toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
   .toggle-track {
-    position: absolute;
-    inset: 0;
-    background: var(--border);
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background 0.2s;
+    position: absolute; inset: 0; background: var(--border);
+    border-radius: 999px; cursor: pointer; transition: background 0.2s;
   }
   .toggle-track::after {
-    content: '';
-    position: absolute;
-    left: 3px; top: 3px;
-    width: 18px; height: 18px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    content: ''; position: absolute; left: 3px; top: 3px;
+    width: 18px; height: 18px; background: white; border-radius: 50%;
+    transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
   .toggle-wrap input:checked + .toggle-track { background: var(--mint); }
   .toggle-wrap input:checked + .toggle-track::after { transform: translateX(20px); }
 
   /* ── Detail screen ───────────────────────────────────────────── */
   #detail-screen { padding: 0; }
-
   .detail-hero {
-    position: relative;
-    height: 300px;
-    background: linear-gradient(135deg, var(--surface2), var(--border));
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative; height: 300px;
+    background: linear-gradient(135deg, #e8ddd0, var(--border));
+    background-size: cover; background-position: center top;
     flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
   }
-  .hero-emoji { font-size: 80px; }
-
+  .hero-no-poster { font-size: 80px; }
   .hero-gradient {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, rgba(253,246,236,0.95) 100%);
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, transparent 35%, rgba(253,246,236,0.97) 100%);
     pointer-events: none;
   }
-
   .hero-toprow {
-    position: absolute;
-    top: 16px; left: 12px; right: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    position: absolute; top: 14px; left: 10px; right: 10px;
+    display: flex; align-items: center; gap: 8px;
   }
-  .hero-back-btn {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: rgba(253,246,236,0.85);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--deep);
-    flex-shrink: 0;
-    transition: background 0.15s;
+  .hero-icon-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(253,246,236,0.88); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--deep); flex-shrink: 0; transition: background 0.15s;
   }
-  .hero-back-btn:hover { background: rgba(253,246,236,1); }
-  .hero-back-btn svg { width: 18px; height: 18px; }
+  .hero-icon-btn:hover { background: rgba(253,246,236,1); }
+  .hero-icon-btn svg { width: 18px; height: 18px; }
   .hero-logo {
-    font-family: var(--font-title);
-    font-size: 19px;
-    color: var(--deep);
-    cursor: pointer;
-    flex: 1;
+    font-family: var(--font-title); font-size: 19px;
+    color: white; cursor: pointer; flex: 1;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
   .hero-logo:hover { color: var(--mint); }
-  .hero-settings-btn {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: rgba(253,246,236,0.85);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    flex-shrink: 0;
-    transition: background 0.15s;
-  }
-  .hero-settings-btn:hover { background: rgba(253,246,236,1); }
-  .hero-settings-btn svg { width: 18px; height: 18px; }
-
   .ownership-badge {
-    position: absolute;
-    top: 62px;
-    right: 16px;
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: white;
+    position: absolute; top: 60px; right: 14px;
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: white;
     border: 2px solid rgba(255,255,255,0.4);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
-  .ownership-badge.owned { background: #00c853; }
+  .ownership-badge.owned  { background: #00c853; }
   .ownership-badge.not-owned { background: #d50000; }
-
   .hero-title-block {
-    position: absolute;
-    bottom: 16px; left: 20px; right: 20px;
+    position: absolute; bottom: 14px; left: 20px; right: 20px;
   }
   .hero-title {
-    font-family: var(--font-title);
-    font-size: 30px;
-    color: var(--deep);
-    line-height: 1.1;
+    font-family: var(--font-title); font-size: 28px;
+    color: var(--deep); line-height: 1.1;
   }
-  .hero-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hero-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
-  .detail-body { padding: 20px; display: flex; flex-direction: column; gap: 0; }
-
+  .detail-body { padding: 18px 20px 36px; display: flex; flex-direction: column; }
   .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--terra);
-    margin-bottom: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--terra); margin-bottom: 10px;
   }
   .body-divider { height: 1px; background: var(--border); margin: 18px 0; }
 
-  .services-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* Service badges in detail */
+  .services-group { display: flex; flex-wrap: wrap; gap: 8px; }
   .service-badge {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--deep);
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; color: var(--deep);
+    text-decoration: none; transition: border-color 0.15s;
   }
-  .service-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .service-badge:hover { border-color: var(--mint); }
+  .service-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .service-badge .badge-tag {
+    font-size: 10px; font-weight: 700; padding: 1px 5px;
+    border-radius: 4px; white-space: nowrap;
+  }
+  .tag-rent  { background: rgba(232,99,58,0.12); color: var(--terra); }
+  .tag-buy   { background: rgba(91,191,154,0.12); color: var(--mint-dim); }
+  .tag-free  { background: rgba(45,74,62,0.08);  color: var(--muted); }
 
   .summary-text { font-size: 14px; color: var(--muted); line-height: 1.65; }
-
   .ratings-row { display: flex; gap: 12px; }
   .rating-card {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
   .rating-emoji { font-size: 22px; }
   .rating-score { font-family: var(--font-title); font-size: 26px; }
   .rating-label { font-size: 11px; color: var(--muted); }
-  .imdb-score { color: #f5c518; }
-  .rt-score { color: #fa320a; }
+  .imdb-score { color: #e8a020; }
+  .rt-score   { color: #c03010; }
 </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay">
+    <div class="loading-logo">WaarStreamt.Het</div>
+    <div class="loading-spinner"></div>
+    <div id="loading-msg">Streamingdata laden…</div>
+    <div id="loading-error"></div>
+  </div>
 
   <!-- Top bar -->
   <div id="topbar">
@@ -480,22 +372,24 @@
   </div>
 
   <!-- Search screen -->
-  <div id="search-screen" class="screen active">
-    <div class="search-hero">
-      <div class="tagline">Ontdek waar jij kijkt</div>
-      <h1>WAAR<br>STREAMT<br>.HET</h1>
-      <div class="sub">Vind iedere film &amp; serie in één klik</div>
-    </div>
-    <div class="search-wrap">
-      <div class="search-input-row">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input id="search-input" type="text" placeholder="Zoek een film of serie…" autocomplete="off">
+  <div id="search-screen" class="screen">
+    <div style="padding: 28px 20px 16px; display:flex; flex-direction:column; flex:1;">
+      <div class="search-hero">
+        <div class="tagline">Ontdek waar jij kijkt</div>
+        <h1>WAAR<br>STREAMT<br>.HET</h1>
+        <div class="sub">Vind iedere film &amp; serie in één klik</div>
       </div>
-      <div id="suggestions"></div>
+      <div class="search-wrap">
+        <div class="search-input-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input id="search-input" type="text" placeholder="Zoek een film of serie…" autocomplete="off">
+        </div>
+        <div id="suggestions"></div>
+      </div>
+      <div class="search-hint" id="search-hint">Typ minstens 2 tekens om te zoeken</div>
     </div>
-    <div class="search-hint" id="search-hint">Typ minstens 2 tekens om te zoeken</div>
   </div>
 
   <!-- Browse screen -->
@@ -524,38 +418,33 @@
 
   <!-- Settings screen -->
   <div id="settings-screen" class="screen">
-    <div class="settings-section-label">Taal &amp; Regio</div>
-    <div class="setting-field">
-      <label>Taal</label>
-      <select id="lang-select" onchange="saveSetting('language', this.value)">
-        <option>Nederlands</option>
-        <option>English</option>
-        <option>Français</option>
-        <option>Deutsch</option>
-        <option>Español</option>
-      </select>
+    <div style="padding: 24px 20px;">
+      <div class="settings-section-label">Taal &amp; Regio</div>
+      <div class="setting-field">
+        <label>Taal</label>
+        <select id="lang-select" onchange="saveSetting('language', this.value)">
+          <option>Nederlands</option><option>English</option>
+          <option>Français</option><option>Deutsch</option><option>Español</option>
+        </select>
+      </div>
+      <div class="setting-field">
+        <label>Land</label>
+        <select id="country-select" onchange="saveSetting('country', this.value)">
+          <option>Nederland</option><option>België</option>
+          <option>United Kingdom</option><option>United States</option>
+          <option>Deutschland</option><option>France</option>
+        </select>
+      </div>
+      <div class="settings-divider"></div>
+      <div class="settings-section-label">Mijn Streamingdiensten</div>
+      <div class="service-list" id="service-list"></div>
     </div>
-    <div class="setting-field">
-      <label>Land</label>
-      <select id="country-select" onchange="saveSetting('country', this.value)">
-        <option>Nederland</option>
-        <option>België</option>
-        <option>United Kingdom</option>
-        <option>United States</option>
-        <option>Deutschland</option>
-        <option>France</option>
-      </select>
-    </div>
-
-    <div class="settings-divider"></div>
-    <div class="settings-section-label">Mijn Streamingdiensten</div>
-    <div class="service-list" id="service-list"></div>
   </div>
 
   <!-- Detail screen -->
   <div id="detail-screen" class="screen"></div>
 
-  <!-- Tab bar (hidden on detail/settings) -->
+  <!-- Tab bar -->
   <div id="tabbar">
     <button class="tab-btn active" data-tab="search" onclick="switchTab('search')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -565,14 +454,17 @@
     </button>
     <button class="tab-btn" data-tab="browse" onclick="switchTab('browse')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
       </svg>
       Verkennen
     </button>
     <button class="tab-btn" data-tab="trending" onclick="switchTab('trending')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+        <polyline points="17 6 23 6 23 12"/>
       </svg>
       Trending
     </button>
@@ -584,248 +476,326 @@
     </button>
   </div>
 
-</div>
+</div><!-- #app -->
 
 <script>
-// ── Mock data ──────────────────────────────────────────────────────────────
-const MOCK = {
-  "1": {
-    title: "Squid Game", year: 2021, type: "series",
-    summary: "Driehonderd wanhopige mensen nemen deel aan een mysterieus overlevingsspel met dodelijke kinderspelletjes. De inzet? 45,6 miljard won. De prijs? Je leven.",
-    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
-    imdb: 8.0, rt: 95,
-  },
-  "2": {
-    title: "The Bear", year: 2022, type: "series",
-    summary: "Een gelauwerd chef-kok keert terug naar Chicago om zijn familierestaurant te runnen na een persoonlijke tragedie. Een intense blik achter de schermen van een chaotische keuken.",
-    services: [
-      { id: "disney", name: "Disney+", color: "#0063E5" },
-      { id: "star", name: "Star+", color: "#E03A3C" },
-    ],
-    imdb: 8.8, rt: 98,
-  },
-  "3": {
-    title: "Oppenheimer", year: 2023, type: "movie",
-    summary: "Het verhaal van J. Robert Oppenheimer en de race om de eerste atoombom te ontwikkelen tijdens de Tweede Wereldoorlog. Een meesterwerk van Christopher Nolan.",
-    services: [
-      { id: "peacock", name: "Peacock", color: "#000000" },
-      { id: "prime", name: "Prime Video", color: "#00A8E0" },
-    ],
-    imdb: 8.9, rt: 93,
-  },
-  "4": {
-    title: "Stranger Things", year: 2016, type: "series",
-    summary: "In een kleine Amerikaanse stad verdwijnt een jongen mysterieus. Zijn vrienden ontdekken bovennatuurlijke mysteries, geheime experimenten en een vreemd meisje uit een andere dimensie.",
-    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
-    imdb: 8.7, rt: 93,
-  },
-  "5": {
-    title: "Dune: Part Two", year: 2024, type: "movie",
-    summary: "Paul Atreides sluit een alliantie met Chani en de Fremen terwijl hij een heilige oorlog voorbereidt. Een episch sci-fi spektakel op een verzengende woestijnplaneet.",
-    services: [
-      { id: "max", name: "Max", color: "#002BE0" },
-      { id: "apple", name: "Apple TV+", color: "#555555" },
-    ],
-    imdb: 8.5, rt: 92,
-  },
-  "6": {
-    title: "Breaking Bad", year: 2008, type: "series",
-    summary: "Een scheikundeleraar met kanker begint met het produceren van crystal meth om zijn familie financieel veilig te stellen. Zijn onomkeerbare val in criminaliteit.",
-    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
-    imdb: 9.5, rt: 96,
-  },
-  "7": {
-    title: "Succession", year: 2018, type: "series",
-    summary: "De disfunctionele Roy-familie vecht om de controle over een mediakeizerrijk terwijl de patriarch zijn erfopvolging regelt. Scherpe satire op macht en hebzucht.",
-    services: [{ id: "max", name: "Max", color: "#002BE0" }],
-    imdb: 8.9, rt: 99,
-  },
-  "8": {
-    title: "The Substance", year: 2024, type: "movie",
-    summary: "Een verouderende fitnessster gebruikt een experimenteel stof dat een jongere versie van zichzelf creëert. Een radicale body-horror over schoonheidsidealen en zelfvernietiging.",
-    services: [
-      { id: "mubi", name: "MUBI", color: "#1C1C1E" },
-      { id: "prime", name: "Prime Video", color: "#00A8E0" },
-    ],
-    imdb: 7.3, rt: 88,
-  },
-};
-
+// ── Constants ──────────────────────────────────────────────────────────────
 const SERVICES = [
-  { id: "netflix",    name: "Netflix" },
-  { id: "disney",     name: "Disney+" },
-  { id: "prime",      name: "Prime Video" },
-  { id: "max",        name: "Max" },
-  { id: "apple",      name: "Apple TV+" },
-  { id: "streamz",    name: "Streamz" },
-  { id: "vtmgo",      name: "VTM GO" },
-  { id: "mubi",       name: "MUBI" },
-  { id: "peacock",    name: "Peacock" },
-  { id: "paramount",  name: "Paramount+" },
-  { id: "skyshowtime",name: "SkyShowtime" },
+  { id: 'nfx',      name: 'Netflix' },
+  { id: 'dnp',      name: 'Disney+' },
+  { id: 'prv',      name: 'Prime Video' },
+  { id: 'mxx',      name: 'Max' },
+  { id: 'atp',      name: 'Apple TV+' },
+  { id: 'streamz',  name: 'Streamz' },
+  { id: 'vtmgo',    name: 'VTM GO' },
+  { id: 'mbi',      name: 'MUBI' },
+  { id: 'peacock',  name: 'Peacock' },
+  { id: 'paramount',name: 'Paramount+' },
+  { id: 'sst',      name: 'SkyShowtime' },
 ];
 
-// ── State ──────────────────────────────────────────────────────────────────
-let currentTab    = "search";
-let previousScreen = null;
+// provider_short_name → brand hex color
+const PROVIDER_COLORS = {
+  nfx: '#E50914', nfk: '#E50914',
+  prv: '#00A8E0', amz: '#FF9900',
+  mxx: '#002BE0', aho: '#002BE0',
+  kpn: '#009900',
+  vil: '#E84118',
+  sst: '#1A3050',
+  dnp: '#0063E5',
+  atp: '#1C1C1E', avl: '#1C1C1E', itu: '#555555',
+  mbi: '#1C1C1E', amu: '#1C1C1E',
+  npp: '#FF6600', npo: '#FF6600',
+  nlz: '#CC0000',
+  vip: '#0055CC',
+  cru: '#F47521', cra: '#F47521',
+  fm1: '#CC3300',
+  cpd: '#00AEEF',
+  cim: '#333399',
+  snr: '#444444',
+  hay: '#E91E63', ahy: '#E91E63',
+  pth: '#222222',
+  wki: '#BF0000',
+  mej: '#6B3FA0',
+  zav: '#333333',
+};
 
-function loadSettings() {
+function providerColor(id) { return PROVIDER_COLORS[id] || '#888888'; }
+
+// ── App state ──────────────────────────────────────────────────────────────
+let allTitles  = {};  // jw_object_id → title object
+let titleList  = [];  // sorted array for search: [{id, titleLower}]
+let currentTab = 'search';
+let prevScreen = 'search';
+
+// ── CSV loading ─────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const { language, country } = loadPrefs();
+  document.getElementById('lang-select').value    = language;
+  document.getElementById('country-select').value = country;
+
+  Papa.parse('./streaming_nl_2026-05-08.csv', {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) { buildIndex(results.data); },
+    error: function(err) { showLoadError(err.message || 'Kan CSV-bestand niet laden.'); },
+  });
+});
+
+function buildIndex(rows) {
+  const grouped = Object.create(null);
+
+  for (const row of rows) {
+    const id = row.jw_object_id;
+    if (!id) continue;
+
+    if (!grouped[id]) {
+      grouped[id] = {
+        id,
+        title:  row.title,
+        type:   row.object_type,        // 'MOVIE' | 'SHOW'
+        year:   row.release_year ? parseInt(row.release_year, 10) : null,
+        imdb:   row.imdb_score  ? parseFloat(row.imdb_score)  : null,
+        rt:     row.tomatometer ? parseInt(row.tomatometer, 10) : null,
+        poster: row.poster_url  || null,
+        jw_url: row.jw_url      || null,
+        services: [],
+        _svcKeys: new Set(),  // dedup helper: "id|type"
+      };
+    }
+
+    const t = grouped[id];
+
+    // Update scores/poster from later rows if first was empty
+    if (!t.imdb  && row.imdb_score)  t.imdb  = parseFloat(row.imdb_score);
+    if (!t.rt    && row.tomatometer) t.rt     = parseInt(row.tomatometer, 10);
+    if (!t.poster && row.poster_url) t.poster = row.poster_url;
+
+    const svcKey = `${row.provider_short_name}|${row.monetization_type}`;
+    if (!t._svcKeys.has(svcKey)) {
+      t._svcKeys.add(svcKey);
+      t.services.push({
+        id:        row.provider_short_name,
+        name:      row.provider_name,
+        type:      row.monetization_type,  // FLATRATE | RENT | BUY | ADS | FREE | CINEMA
+        price:     row.price_value ? parseFloat(row.price_value) : null,
+        currency:  row.price_currency || 'EUR',
+        offer_url: row.offer_url || null,
+      });
+    }
+  }
+
+  // Clean up dedup sets, sort services (FLATRATE first)
+  for (const t of Object.values(grouped)) {
+    delete t._svcKeys;
+    t.services.sort((a, b) => {
+      const order = { FLATRATE: 0, FREE: 1, ADS: 2, RENT: 3, BUY: 4, CINEMA: 5 };
+      return (order[a.type] ?? 9) - (order[b.type] ?? 9);
+    });
+  }
+
+  allTitles = grouped;
+  titleList  = Object.values(grouped)
+    .map(t => ({ id: t.id, titleLower: t.title.toLowerCase() }));
+
+  hideLoadingOverlay();
+  switchTab('search');
+}
+
+function showLoadError(msg) {
+  document.getElementById('loading-msg').textContent = '';
+  document.querySelector('.loading-spinner').style.display = 'none';
+  const el = document.getElementById('loading-error');
+  el.style.display = 'block';
+  el.innerHTML = `⚠️ ${msg}<br><br><small>Open dit bestand via een lokale server,<br>bijv. <code>python -m http.server</code> of VS Code Live Server.</small>`;
+}
+
+function hideLoadingOverlay() {
+  const ov = document.getElementById('loading-overlay');
+  ov.classList.add('fade-out');
+  setTimeout(() => { ov.style.display = 'none'; }, 320);
+}
+
+// ── Preferences (localStorage) ─────────────────────────────────────────────
+function loadPrefs() {
   return {
-    language:      localStorage.getItem("ws_language") || "Nederlands",
-    country:       localStorage.getItem("ws_country")  || "Nederland",
-    ownedServices: new Set(JSON.parse(localStorage.getItem("ws_services") || "[]")),
+    language:      localStorage.getItem('ws_language') || 'Nederlands',
+    country:       localStorage.getItem('ws_country')  || 'Nederland',
+    ownedServices: new Set(JSON.parse(localStorage.getItem('ws_services') || '[]')),
   };
 }
 
-function saveSetting(key, value) {
-  localStorage.setItem("ws_" + key, value);
-}
+function saveSetting(key, value) { localStorage.setItem('ws_' + key, value); }
 
 function toggleService(id) {
-  const settings = loadSettings();
-  if (settings.ownedServices.has(id)) {
-    settings.ownedServices.delete(id);
-  } else {
-    settings.ownedServices.add(id);
-  }
-  localStorage.setItem("ws_services", JSON.stringify([...settings.ownedServices]));
+  const owned = loadPrefs().ownedServices;
+  owned.has(id) ? owned.delete(id) : owned.add(id);
+  localStorage.setItem('ws_services', JSON.stringify([...owned]));
 }
 
-// ── Tab switching ──────────────────────────────────────────────────────────
+// ── Navigation ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById(tab + "-screen").classList.add("active");
-  document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
-  document.getElementById("tabbar").style.display = "flex";
-  if (tab === "search") {
-    document.getElementById("search-hint").style.display =
-      document.getElementById("search-input").value.length >= 2 ? "none" : "block";
-  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tab + '-screen').classList.add('active');
+  const btn = document.querySelector(`[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  document.getElementById('tabbar').style.display = 'flex';
 }
 
-// ── Settings ───────────────────────────────────────────────────────────────
+function goHome() {
+  document.getElementById('search-input').value = '';
+  hideSuggestions();
+  document.getElementById('search-hint').style.display = 'block';
+  switchTab('search');
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
 function openSettings() {
-  previousScreen = currentTab;
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.getElementById("settings-screen").classList.add("active");
-  document.getElementById("tabbar").style.display = "none";
-  renderSettings();
-}
+  prevScreen = currentTab;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('settings-screen').classList.add('active');
+  document.getElementById('tabbar').style.display = 'none';
 
-function renderSettings() {
-  const { language, country, ownedServices } = loadSettings();
-  document.getElementById("lang-select").value    = language;
-  document.getElementById("country-select").value = country;
+  const { language, country, ownedServices } = loadPrefs();
+  document.getElementById('lang-select').value    = language;
+  document.getElementById('country-select').value = country;
 
-  const list = document.getElementById("service-list");
-  list.innerHTML = SERVICES.map(s => `
+  document.getElementById('service-list').innerHTML = SERVICES.map(s => `
     <div class="service-row">
       <span class="service-name">${s.name}</span>
       <label class="toggle-wrap">
-        <input type="checkbox" ${ownedServices.has(s.id) ? "checked" : ""}
+        <input type="checkbox" ${ownedServices.has(s.id) ? 'checked' : ''}
           onchange="toggleService('${s.id}')">
         <span class="toggle-track"></span>
       </label>
     </div>
-  `).join("");
+  `).join('');
 }
 
-// ── Home navigation ────────────────────────────────────────────────────────
-function goHome() {
-  switchTab("search");
-  document.getElementById("search-input").value = "";
-  hideSuggestions();
-  document.getElementById("search-hint").style.display = "block";
-}
+// ── Search ──────────────────────────────────────────────────────────────────
+const searchInput   = document.getElementById('search-input');
+const suggestionsEl = document.getElementById('suggestions');
+const hintEl        = document.getElementById('search-hint');
 
-// ── Search ─────────────────────────────────────────────────────────────────
-const searchInput = document.getElementById("search-input");
-const suggestionsEl = document.getElementById("suggestions");
-const hintEl = document.getElementById("search-hint");
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  if (q.length < 2) { hideSuggestions(); hintEl.style.display = 'block'; return; }
+  hintEl.style.display = 'none';
 
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.trim().toLowerCase();
-  if (q.length < 2) {
-    hideSuggestions();
-    hintEl.style.display = "block";
-    return;
-  }
-  hintEl.style.display = "none";
-  const matches = Object.entries(MOCK).filter(([, d]) =>
-    d.title.toLowerCase().includes(q)
-  );
+  const lower   = q.toLowerCase();
+  const matches = titleList
+    .filter(t => t.titleLower.includes(lower))
+    .slice(0, 10);
+
   if (!matches.length) { hideSuggestions(); return; }
-  suggestionsEl.innerHTML = matches.map(([id, d]) => `
-    <div class="suggestion-row" onclick="openDetail('${id}')">
-      <div class="sug-thumb">${d.type === "movie" ? "🎬" : "📺"}</div>
-      <div class="sug-info">
-        <div class="sug-title">${d.title}</div>
-        <div class="sug-meta">${d.year ?? ""} · ${d.type === "movie" ? "Film" : "Serie"}</div>
-      </div>
-    </div>
-  `).join("");
-  suggestionsEl.classList.add("visible");
+
+  suggestionsEl.innerHTML = matches.map(({ id }) => {
+    const d = allTitles[id];
+    const thumbHtml = d.poster
+      ? `<img src="${d.poster.replace('/s718/', '/s166/')}" alt="" loading="lazy" onerror="this.parentNode.textContent='${d.type === 'MOVIE' ? '🎬' : '📺'}';">`
+      : (d.type === 'MOVIE' ? '🎬' : '📺');
+    return `
+      <div class="suggestion-row" onclick="openDetail('${id}')">
+        <div class="sug-thumb">${thumbHtml}</div>
+        <div class="sug-info">
+          <div class="sug-title">${escHtml(d.title)}</div>
+          <div class="sug-meta">${d.year ?? ''}${d.year ? ' · ' : ''}${d.type === 'MOVIE' ? 'Film' : 'Serie'}</div>
+        </div>
+      </div>`;
+  }).join('');
+  suggestionsEl.classList.add('visible');
 });
 
-searchInput.addEventListener("blur", () => {
-  setTimeout(hideSuggestions, 150);
-});
+searchInput.addEventListener('blur', () => setTimeout(hideSuggestions, 160));
 
 function hideSuggestions() {
-  suggestionsEl.classList.remove("visible");
-  suggestionsEl.innerHTML = "";
+  suggestionsEl.classList.remove('visible');
+  suggestionsEl.innerHTML = '';
 }
 
-// ── Detail screen ──────────────────────────────────────────────────────────
+// ── Detail ──────────────────────────────────────────────────────────────────
 function openDetail(id) {
   hideSuggestions();
-  const d = MOCK[id];
-  const { ownedServices } = loadSettings();
-  const configured = ownedServices.size > 0;
-  const owned = configured && d.services.some(s => ownedServices.has(s.id));
+  const d = allTitles[id];
+  if (!d) return;
 
-  let badgeHtml = "";
-  if (configured) {
-    const cls   = owned ? "owned" : "not-owned";
-    const glyph = owned ? "✓" : "✗";
-    badgeHtml = `<div class="ownership-badge ${cls}">${glyph}</div>`;
+  const { ownedServices } = loadPrefs();
+  const flatrateIds = d.services.filter(s => s.type === 'FLATRATE').map(s => s.id);
+  const configured  = ownedServices.size > 0;
+  const owned       = configured && flatrateIds.some(sid => ownedServices.has(sid));
+
+  // Ownership badge
+  const badgeHtml = configured
+    ? `<div class="ownership-badge ${owned ? 'owned' : 'not-owned'}">${owned ? '✓' : '✗'}</div>`
+    : '';
+
+  // Hero background
+  const heroBg = d.poster
+    ? `background-image:url('${d.poster}');background-size:cover;background-position:center top;`
+    : '';
+  const heroContent = d.poster ? '' : `<div class="hero-no-poster">${d.type === 'MOVIE' ? '🎬' : '📺'}</div>`;
+
+  // Services grouped: subscription | free | rent/buy
+  const flatrateServices = d.services.filter(s => s.type === 'FLATRATE');
+  const freeServices     = d.services.filter(s => s.type === 'FREE' || s.type === 'ADS');
+  const transServices    = d.services.filter(s => s.type === 'RENT' || s.type === 'BUY');
+
+  function renderBadges(list) {
+    return list.map(s => {
+      let tagHtml = '';
+      if (s.type === 'RENT') {
+        const label = s.price ? `€${s.price.toFixed(2)} huren` : 'Huren';
+        tagHtml = `<span class="badge-tag tag-rent">${label}</span>`;
+      } else if (s.type === 'BUY') {
+        const label = s.price ? `€${s.price.toFixed(2)} kopen` : 'Kopen';
+        tagHtml = `<span class="badge-tag tag-buy">${label}</span>`;
+      } else if (s.type === 'FREE' || s.type === 'ADS') {
+        tagHtml = `<span class="badge-tag tag-free">Gratis</span>`;
+      }
+      const href = s.offer_url ? ` href="${escAttr(s.offer_url)}" target="_blank" rel="noopener"` : '';
+      return `<a class="service-badge"${href}>
+        <div class="service-dot" style="background:${providerColor(s.id)}"></div>
+        ${escHtml(s.name)}${tagHtml}
+      </a>`;
+    }).join('');
   }
 
-  const servicesHtml = d.services.map(s => `
-    <div class="service-badge">
-      <div class="service-dot" style="background:${s.color}"></div>
-      ${s.name}
-    </div>
-  `).join("");
+  const allServicesBadges = [
+    ...(flatrateServices.length ? [renderBadges(flatrateServices)] : []),
+    ...(freeServices.length     ? [renderBadges(freeServices)]     : []),
+    ...(transServices.length    ? [renderBadges(transServices)]    : []),
+  ].join('');
 
-  const imdbHtml = d.imdb != null ? `
-    <div class="rating-card">
-      <div class="rating-emoji">⭐</div>
-      <div class="rating-score imdb-score">${d.imdb}/10</div>
-      <div class="rating-label">IMDb score</div>
-    </div>` : "";
+  const ratingsHtml = [
+    d.imdb != null ? `
+      <div class="rating-card">
+        <div class="rating-emoji">⭐</div>
+        <div class="rating-score imdb-score">${d.imdb.toFixed(1)}/10</div>
+        <div class="rating-label">IMDb score</div>
+      </div>` : '',
+    d.rt != null ? `
+      <div class="rating-card">
+        <div class="rating-emoji">🍅</div>
+        <div class="rating-score rt-score">${d.rt}%</div>
+        <div class="rating-label">Rotten Tomatoes</div>
+      </div>` : '',
+  ].join('');
 
-  const rtHtml = d.rt != null ? `
-    <div class="rating-card">
-      <div class="rating-emoji">🍅</div>
-      <div class="rating-score rt-score">${d.rt}%</div>
-      <div class="rating-label">Rotten Tomatoes</div>
-    </div>` : "";
-
-  document.getElementById("detail-screen").innerHTML = `
-    <div class="detail-hero">
-      <div class="hero-emoji">${d.type === "movie" ? "🎬" : "📺"}</div>
+  document.getElementById('detail-screen').innerHTML = `
+    <div class="detail-hero" style="${heroBg}">
+      ${heroContent}
       <div class="hero-gradient"></div>
       <div class="hero-toprow">
-        <button class="hero-back-btn" onclick="closeDetail()">
+        <button class="hero-icon-btn" onclick="closeDetail()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
         </button>
         <div class="hero-logo" onclick="goHome()">WaarStreamt.Het</div>
-        <button class="hero-settings-btn" onclick="openSettings()">
+        <button class="hero-icon-btn" onclick="openSettings()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -834,38 +804,35 @@ function openDetail(id) {
       </div>
       ${badgeHtml}
       <div class="hero-title-block">
-        <div class="hero-title">${d.title}</div>
-        <div class="hero-meta">${d.year ?? ""} · ${d.type === "movie" ? "Film" : "Serie"}</div>
+        <div class="hero-title">${escHtml(d.title)}</div>
+        <div class="hero-meta">${d.year ?? ''}${d.year ? ' · ' : ''}${d.type === 'MOVIE' ? 'Film' : 'Serie'}</div>
       </div>
     </div>
     <div class="detail-body">
-      <div class="section-label">Beschikbaar op</div>
-      <div class="services-row">${servicesHtml}</div>
-      <div class="body-divider"></div>
-      <div class="section-label">Over dit verhaal</div>
-      <div class="summary-text">${d.summary}</div>
-      <div class="body-divider"></div>
-      <div class="section-label">Beoordelingen</div>
-      <div class="ratings-row">${imdbHtml}${rtHtml}</div>
+      ${allServicesBadges ? `
+        <div class="section-label">Beschikbaar op</div>
+        <div class="services-group">${allServicesBadges}</div>
+        <div class="body-divider"></div>` : ''}
+      ${ratingsHtml ? `
+        <div class="section-label">Beoordelingen</div>
+        <div class="ratings-row">${ratingsHtml}</div>` : ''}
     </div>
   `;
 
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.getElementById("detail-screen").classList.add("active");
-  document.getElementById("tabbar").style.display = "none";
-  previousScreen = currentTab;
+  prevScreen = currentTab;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('detail-screen').classList.add('active');
+  document.getElementById('tabbar').style.display = 'none';
+  document.getElementById('detail-screen').scrollTop = 0;
 }
 
-function closeDetail() {
-  switchTab(previousScreen || "search");
-}
+function closeDetail() { switchTab(prevScreen || 'search'); }
 
-// ── Init ───────────────────────────────────────────────────────────────────
-(function init() {
-  const { language, country } = loadSettings();
-  document.getElementById("lang-select").value    = language;
-  document.getElementById("country-select").value = country;
-})();
+// ── Utility ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) { return escHtml(s); }
 </script>
 </body>
 </html>

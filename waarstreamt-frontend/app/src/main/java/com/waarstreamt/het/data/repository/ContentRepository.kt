@@ -13,6 +13,12 @@ sealed class Result<out T> {
     data object Loading : Result<Nothing>()
 }
 
+// TODO: Replace CSV-based mock data with real API calls
+// API endpoints (when backend is live):
+//   GET /search?q={query} → List<SearchResult>
+//   GET /content/{id}     → ContentDetail
+// Set useMockData = false and update BASE_URL in build.gradle.kts
+
 @Singleton
 class ContentRepository @Inject constructor(
     private val api: WaarStreamtApi,
