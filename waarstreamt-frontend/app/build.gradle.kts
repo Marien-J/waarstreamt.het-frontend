@@ -89,6 +89,12 @@ dependencies {
     // Images
     implementation(libs.coil.compose)
 
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Extended Material Icons
+    implementation("androidx.compose.material:material-icons-extended")
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

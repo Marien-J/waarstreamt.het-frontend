@@ -7,10 +7,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.waarstreamt.het.ui.screens.DetailScreen
-import com.waarstreamt.het.ui.screens.HomeScreen
+import com.waarstreamt.het.ui.screens.MainScreen
+import com.waarstreamt.het.ui.screens.SettingsScreen
 
 object Routes {
-    const val HOME = "home"
+    const val MAIN = "main"
+    const val SETTINGS = "settings"
     const val DETAIL = "detail/{contentId}"
     fun detail(id: String) = "detail/$id"
 }
@@ -19,12 +21,19 @@ object Routes {
 fun WaarStreamtNavGraph() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
-        composable(Routes.HOME) {
-            HomeScreen(
-                onResultClick = { id ->
-                    navController.navigate(Routes.detail(id))
+    NavHost(navController = navController, startDestination = Routes.MAIN) {
+        composable(Routes.MAIN) {
+            MainScreen(
+                onNavigateToDetail = { id -> navController.navigate(Routes.detail(id)) },
+                onNavigateToSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
                 },
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onNavigateHome = { navController.popBackStack(Routes.MAIN, inclusive = false) },
+                onBack = { navController.popBackStack() },
             )
         }
         composable(
@@ -35,6 +44,10 @@ fun WaarStreamtNavGraph() {
             DetailScreen(
                 contentId = contentId,
                 onBack = { navController.popBackStack() },
+                onNavigateHome = { navController.popBackStack(Routes.MAIN, inclusive = false) },
+                onNavigateToSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                },
             )
         }
     }

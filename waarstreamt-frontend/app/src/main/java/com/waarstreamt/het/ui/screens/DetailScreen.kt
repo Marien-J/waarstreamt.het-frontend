@@ -3,6 +3,7 @@ package com.waarstreamt.het.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,19 +49,25 @@ import com.waarstreamt.het.data.model.ContentDetail
 import com.waarstreamt.het.data.model.ContentType
 import com.waarstreamt.het.data.model.StreamingService
 import com.waarstreamt.het.ui.theme.Background
+import com.waarstreamt.het.ui.theme.BebasNeue
 import com.waarstreamt.het.ui.theme.Muted
 import com.waarstreamt.het.ui.theme.Surface
 import com.waarstreamt.het.ui.theme.SurfaceVariant
 import com.waarstreamt.het.ui.theme.Teal
 import com.waarstreamt.het.ui.viewmodel.SearchViewModel
+import com.waarstreamt.het.ui.viewmodel.SettingsViewModel
 
 @Composable
 fun DetailScreen(
     contentId: String,
     onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.detailUiState.collectAsState()
+    val ownedServices by settingsViewModel.ownedServices.collectAsState()
 
     LaunchedEffect(contentId) {
         viewModel.loadDetail(contentId)
@@ -73,14 +82,26 @@ fun DetailScreen(
             when {
                 s.isLoading -> LoadingState()
                 s.error != null -> ErrorState(s.error)
-                s.detail != null -> DetailContent(s.detail, onBack)
+                s.detail != null -> DetailContent(
+                    detail = s.detail,
+                    onBack = onBack,
+                    onNavigateHome = onNavigateHome,
+                    onNavigateToSettings = onNavigateToSettings,
+                    ownedServices = ownedServices,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
+private fun DetailContent(
+    detail: ContentDetail,
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    ownedServices: Set<String>,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -100,17 +121,11 @@ private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                // Placeholder with gradient
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    SurfaceVariant,
-                                    Surface,
-                                ),
-                            ),
+                            Brush.linearGradient(colors = listOf(SurfaceVariant, Surface)),
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -127,28 +142,77 @@ private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.3f to Color.Transparent,
-                                1f to Background,
-                            ),
+                            colorStops = arrayOf(0.3f to Color.Transparent, 1f to Background),
                         ),
                     ),
             )
 
-            // Back button
-            IconButton(
-                onClick = onBack,
+            // Top overlay: back button + logo + settings icon
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(8.dp)
-                    .size(40.dp)
-                    .background(Background.copy(alpha = 0.7f), CircleShape),
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.ArrowBack,
-                    contentDescription = "Terug",
-                    tint = MaterialTheme.colorScheme.onBackground,
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Background.copy(alpha = 0.7f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ArrowBack,
+                        contentDescription = "Terug",
+                        tint = Color.White,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "WaarStreamt.Het",
+                    style = TextStyle(fontFamily = BebasNeue, fontSize = 22.sp, letterSpacing = 0.5.sp),
+                    color = Color.White,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onNavigateHome),
                 )
+                IconButton(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Background.copy(alpha = 0.7f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = "Instellingen",
+                        tint = Color.White,
+                    )
+                }
+            }
+
+            // Ownership badge (top-right, below overlay row)
+            if (ownedServices.isNotEmpty()) {
+                val hasOwned = detail.streamingServices.any { it.id in ownedServices }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 52.dp, end = 16.dp)
+                        .size(36.dp)
+                        .background(
+                            color = if (hasOwned) Color(0xFF00C853) else Color(0xFFD50000),
+                            shape = CircleShape,
+                        )
+                        .border(2.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (hasOwned) "✓" else "✗",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
 
             // Title at bottom of hero
@@ -182,12 +246,9 @@ private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
         ) {
-            // Streaming services
             SectionLabel("Beschikbaar op")
             Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 detail.streamingServices.forEach { service ->
                     ServiceBadge(service)
                 }
@@ -195,7 +256,6 @@ private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
 
             Divider()
 
-            // Summary
             SectionLabel("Over dit verhaal")
             Spacer(modifier = Modifier.height(10.dp))
             Text(
@@ -207,7 +267,6 @@ private fun DetailContent(detail: ContentDetail, onBack: () -> Unit) {
 
             Divider()
 
-            // Ratings
             SectionLabel("Beoordelingen")
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -328,20 +387,14 @@ private fun RatingCard(
 
 @Composable
 private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = Teal)
     }
 }
 
 @Composable
 private fun ErrorState(error: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = error,
             style = MaterialTheme.typography.bodyMedium,
