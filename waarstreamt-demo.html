@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaarStreamt.Het — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #fdf6ec;
+    --surface:   #ffffff;
+    --surface2:  #f4ede2;
+    --mint:      #5bbf9a;
+    --mint-dim:  #3d9e7d;
+    --mint-pale: rgba(91,191,154,0.12);
+    --deep:      #2d4a3e;
+    --terra:     #e8633a;
+    --muted:     #7a9089;
+    --border:    #e3d8cc;
+    --shadow:    0 2px 12px rgba(45,74,62,0.10);
+    --radius:    14px;
+    --font-title:'Righteous', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+  }
+
+  html, body { height: 100%; background: var(--bg); font-family: var(--font-body); color: var(--deep); }
+
+  /* ── Layout shell ──────────────────────────────────────────── */
+  #app {
+    max-width: 420px;
+    margin: 0 auto;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ───────────────────────────────────────────────── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  #topbar-logo {
+    font-family: var(--font-title);
+    font-size: 22px;
+    color: var(--deep);
+    cursor: pointer;
+    user-select: none;
+    letter-spacing: 0.3px;
+  }
+  #topbar-logo:hover { color: var(--mint); }
+  #settings-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  #settings-btn:hover { background: var(--mint-pale); color: var(--mint); }
+  #settings-btn svg { width: 22px; height: 22px; }
+
+  /* ── Screens ────────────────────────────────────────────────── */
+  .screen { display: none; flex: 1; overflow-y: auto; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── Bottom tab bar ─────────────────────────────────────────── */
+  #tabbar {
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    height: 64px;
+  }
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: color 0.15s;
+    padding: 8px 0;
+  }
+  .tab-btn svg { width: 22px; height: 22px; transition: stroke 0.15s, fill 0.15s; }
+  .tab-btn.active { color: var(--mint); }
+  .tab-btn.active svg { stroke: var(--mint); }
+
+  /* ── Search screen ──────────────────────────────────────────── */
+  #search-screen { padding: 28px 20px 16px; }
+
+  .search-hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .search-hero .tagline {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 8px;
+  }
+  .search-hero h1 {
+    font-family: var(--font-title);
+    font-size: 52px;
+    line-height: 1.05;
+    color: var(--deep);
+    margin-bottom: 8px;
+  }
+  .search-hero .sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .search-wrap { position: relative; }
+  .search-input-row {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input-row:focus-within {
+    border-color: var(--mint);
+    box-shadow: 0 0 0 3px rgba(91,191,154,0.15);
+  }
+  .search-input-row svg { width: 18px; height: 18px; stroke: var(--mint); flex-shrink: 0; }
+  #search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--deep);
+    padding: 12px 10px;
+  }
+  #search-input::placeholder { color: var(--muted); }
+
+  #suggestions {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    z-index: 20;
+    overflow: hidden;
+  }
+  #suggestions.visible { display: block; }
+
+  .suggestion-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .suggestion-row:hover { background: var(--surface2); }
+  .suggestion-row + .suggestion-row { border-top: 1px solid var(--border); }
+
+  .sug-thumb {
+    width: 36px;
+    height: 50px;
+    background: var(--surface2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .sug-info { flex: 1; min-width: 0; }
+  .sug-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--deep);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sug-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .search-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 32px;
+    opacity: 0.6;
+  }
+
+  /* ── Placeholder screens ─────────────────────────────────────── */
+  .placeholder-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 24px;
+    gap: 14px;
+  }
+  .placeholder-screen h1 {
+    font-family: var(--font-title);
+    font-size: 42px;
+    line-height: 1.05;
+    color: var(--deep);
+  }
+  .placeholder-screen p {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* ── Settings screen ─────────────────────────────────────────── */
+  #settings-screen { padding: 24px 20px; gap: 0; }
+
+  .settings-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--terra);
+    margin-bottom: 14px;
+  }
+  .settings-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  .setting-field { margin-bottom: 16px; }
+  .setting-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .setting-field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--deep);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a9089' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .setting-field select:focus { border-color: var(--mint); box-shadow: 0 0 0 3px rgba(91,191,154,0.15); }
+
+  .service-list { display: flex; flex-direction: column; gap: 2px; }
+  .service-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .service-row:last-child { border-bottom: none; }
+  .service-name { font-size: 14px; font-weight: 500; color: var(--deep); }
+
+  .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-wrap input:checked + .toggle-track { background: var(--mint); }
+  .toggle-wrap input:checked + .toggle-track::after { transform: translateX(20px); }
+
+  /* ── Detail screen ───────────────────────────────────────────── */
+  #detail-screen { padding: 0; }
+
+  .detail-hero {
+    position: relative;
+    height: 300px;
+    background: linear-gradient(135deg, var(--surface2), var(--border));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .hero-emoji { font-size: 80px; }
+
+  .hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(253,246,236,0.95) 100%);
+    pointer-events: none;
+  }
+
+  .hero-toprow {
+    position: absolute;
+    top: 16px; left: 12px; right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-back-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(253,246,236,0.85);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--deep);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .hero-back-btn:hover { background: rgba(253,246,236,1); }
+  .hero-back-btn svg { width: 18px; height: 18px; }
+  .hero-logo {
+    font-family: var(--font-title);
+    font-size: 19px;
+    color: var(--deep);
+    cursor: pointer;
+    flex: 1;
+  }
+  .hero-logo:hover { color: var(--mint); }
+  .hero-settings-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(253,246,236,0.85);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .hero-settings-btn:hover { background: rgba(253,246,236,1); }
+  .hero-settings-btn svg { width: 18px; height: 18px; }
+
+  .ownership-badge {
+    position: absolute;
+    top: 62px;
+    right: 16px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+  .ownership-badge.owned { background: #00c853; }
+  .ownership-badge.not-owned { background: #d50000; }
+
+  .hero-title-block {
+    position: absolute;
+    bottom: 16px; left: 20px; right: 20px;
+  }
+  .hero-title {
+    font-family: var(--font-title);
+    font-size: 30px;
+    color: var(--deep);
+    line-height: 1.1;
+  }
+  .hero-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .detail-body { padding: 20px; display: flex; flex-direction: column; gap: 0; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--terra);
+    margin-bottom: 10px;
+  }
+  .body-divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+  .services-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .service-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--deep);
+  }
+  .service-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .summary-text { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+  .ratings-row { display: flex; gap: 12px; }
+  .rating-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .rating-emoji { font-size: 22px; }
+  .rating-score { font-family: var(--font-title); font-size: 26px; }
+  .rating-label { font-size: 11px; color: var(--muted); }
+  .imdb-score { color: #f5c518; }
+  .rt-score { color: #fa320a; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div id="topbar-logo" onclick="goHome()">WaarStreamt.Het</div>
+    <button id="settings-btn" onclick="openSettings()" title="Instellingen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Search screen -->
+  <div id="search-screen" class="screen active">
+    <div class="search-hero">
+      <div class="tagline">Ontdek waar jij kijkt</div>
+      <h1>WAAR<br>STREAMT<br>.HET</h1>
+      <div class="sub">Vind iedere film &amp; serie in één klik</div>
+    </div>
+    <div class="search-wrap">
+      <div class="search-input-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="search-input" type="text" placeholder="Zoek een film of serie…" autocomplete="off">
+      </div>
+      <div id="suggestions"></div>
+    </div>
+    <div class="search-hint" id="search-hint">Typ minstens 2 tekens om te zoeken</div>
+  </div>
+
+  <!-- Browse screen -->
+  <div id="browse-screen" class="screen">
+    <div class="placeholder-screen">
+      <h1>WAAR<br>STREAMT<br>.HET</h1>
+      <p>Browse komt binnenkort</p>
+    </div>
+  </div>
+
+  <!-- Trending screen -->
+  <div id="trending-screen" class="screen">
+    <div class="placeholder-screen">
+      <h1>WAAR<br>STREAMT<br>.HET</h1>
+      <p>Trending komt binnenkort</p>
+    </div>
+  </div>
+
+  <!-- Saved screen -->
+  <div id="saved-screen" class="screen">
+    <div class="placeholder-screen">
+      <h1>WAAR<br>STREAMT<br>.HET</h1>
+      <p>Opgeslagen komt binnenkort</p>
+    </div>
+  </div>
+
+  <!-- Settings screen -->
+  <div id="settings-screen" class="screen">
+    <div class="settings-section-label">Taal &amp; Regio</div>
+    <div class="setting-field">
+      <label>Taal</label>
+      <select id="lang-select" onchange="saveSetting('language', this.value)">
+        <option>Nederlands</option>
+        <option>English</option>
+        <option>Français</option>
+        <option>Deutsch</option>
+        <option>Español</option>
+      </select>
+    </div>
+    <div class="setting-field">
+      <label>Land</label>
+      <select id="country-select" onchange="saveSetting('country', this.value)">
+        <option>Nederland</option>
+        <option>België</option>
+        <option>United Kingdom</option>
+        <option>United States</option>
+        <option>Deutschland</option>
+        <option>France</option>
+      </select>
+    </div>
+
+    <div class="settings-divider"></div>
+    <div class="settings-section-label">Mijn Streamingdiensten</div>
+    <div class="service-list" id="service-list"></div>
+  </div>
+
+  <!-- Detail screen -->
+  <div id="detail-screen" class="screen"></div>
+
+  <!-- Tab bar (hidden on detail/settings) -->
+  <div id="tabbar">
+    <button class="tab-btn active" data-tab="search" onclick="switchTab('search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      Zoeken
+    </button>
+    <button class="tab-btn" data-tab="browse" onclick="switchTab('browse')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Verkennen
+    </button>
+    <button class="tab-btn" data-tab="trending" onclick="switchTab('trending')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+      </svg>
+      Trending
+    </button>
+    <button class="tab-btn" data-tab="saved" onclick="switchTab('saved')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+      Opgeslagen
+    </button>
+  </div>
+
+</div>
+
+<script>
+// ── Mock data ──────────────────────────────────────────────────────────────
+const MOCK = {
+  "1": {
+    title: "Squid Game", year: 2021, type: "series",
+    summary: "Driehonderd wanhopige mensen nemen deel aan een mysterieus overlevingsspel met dodelijke kinderspelletjes. De inzet? 45,6 miljard won. De prijs? Je leven.",
+    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
+    imdb: 8.0, rt: 95,
+  },
+  "2": {
+    title: "The Bear", year: 2022, type: "series",
+    summary: "Een gelauwerd chef-kok keert terug naar Chicago om zijn familierestaurant te runnen na een persoonlijke tragedie. Een intense blik achter de schermen van een chaotische keuken.",
+    services: [
+      { id: "disney", name: "Disney+", color: "#0063E5" },
+      { id: "star", name: "Star+", color: "#E03A3C" },
+    ],
+    imdb: 8.8, rt: 98,
+  },
+  "3": {
+    title: "Oppenheimer", year: 2023, type: "movie",
+    summary: "Het verhaal van J. Robert Oppenheimer en de race om de eerste atoombom te ontwikkelen tijdens de Tweede Wereldoorlog. Een meesterwerk van Christopher Nolan.",
+    services: [
+      { id: "peacock", name: "Peacock", color: "#000000" },
+      { id: "prime", name: "Prime Video", color: "#00A8E0" },
+    ],
+    imdb: 8.9, rt: 93,
+  },
+  "4": {
+    title: "Stranger Things", year: 2016, type: "series",
+    summary: "In een kleine Amerikaanse stad verdwijnt een jongen mysterieus. Zijn vrienden ontdekken bovennatuurlijke mysteries, geheime experimenten en een vreemd meisje uit een andere dimensie.",
+    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
+    imdb: 8.7, rt: 93,
+  },
+  "5": {
+    title: "Dune: Part Two", year: 2024, type: "movie",
+    summary: "Paul Atreides sluit een alliantie met Chani en de Fremen terwijl hij een heilige oorlog voorbereidt. Een episch sci-fi spektakel op een verzengende woestijnplaneet.",
+    services: [
+      { id: "max", name: "Max", color: "#002BE0" },
+      { id: "apple", name: "Apple TV+", color: "#555555" },
+    ],
+    imdb: 8.5, rt: 92,
+  },
+  "6": {
+    title: "Breaking Bad", year: 2008, type: "series",
+    summary: "Een scheikundeleraar met kanker begint met het produceren van crystal meth om zijn familie financieel veilig te stellen. Zijn onomkeerbare val in criminaliteit.",
+    services: [{ id: "netflix", name: "Netflix", color: "#E50914" }],
+    imdb: 9.5, rt: 96,
+  },
+  "7": {
+    title: "Succession", year: 2018, type: "series",
+    summary: "De disfunctionele Roy-familie vecht om de controle over een mediakeizerrijk terwijl de patriarch zijn erfopvolging regelt. Scherpe satire op macht en hebzucht.",
+    services: [{ id: "max", name: "Max", color: "#002BE0" }],
+    imdb: 8.9, rt: 99,
+  },
+  "8": {
+    title: "The Substance", year: 2024, type: "movie",
+    summary: "Een verouderende fitnessster gebruikt een experimenteel stof dat een jongere versie van zichzelf creëert. Een radicale body-horror over schoonheidsidealen en zelfvernietiging.",
+    services: [
+      { id: "mubi", name: "MUBI", color: "#1C1C1E" },
+      { id: "prime", name: "Prime Video", color: "#00A8E0" },
+    ],
+    imdb: 7.3, rt: 88,
+  },
+};
+
+const SERVICES = [
+  { id: "netflix",    name: "Netflix" },
+  { id: "disney",     name: "Disney+" },
+  { id: "prime",      name: "Prime Video" },
+  { id: "max",        name: "Max" },
+  { id: "apple",      name: "Apple TV+" },
+  { id: "streamz",    name: "Streamz" },
+  { id: "vtmgo",      name: "VTM GO" },
+  { id: "mubi",       name: "MUBI" },
+  { id: "peacock",    name: "Peacock" },
+  { id: "paramount",  name: "Paramount+" },
+  { id: "skyshowtime",name: "SkyShowtime" },
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let currentTab    = "search";
+let previousScreen = null;
+
+function loadSettings() {
+  return {
+    language:      localStorage.getItem("ws_language") || "Nederlands",
+    country:       localStorage.getItem("ws_country")  || "Nederland",
+    ownedServices: new Set(JSON.parse(localStorage.getItem("ws_services") || "[]")),
+  };
+}
+
+function saveSetting(key, value) {
+  localStorage.setItem("ws_" + key, value);
+}
+
+function toggleService(id) {
+  const settings = loadSettings();
+  if (settings.ownedServices.has(id)) {
+    settings.ownedServices.delete(id);
+  } else {
+    settings.ownedServices.add(id);
+  }
+  localStorage.setItem("ws_services", JSON.stringify([...settings.ownedServices]));
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(tab + "-screen").classList.add("active");
+  document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
+  document.getElementById("tabbar").style.display = "flex";
+  if (tab === "search") {
+    document.getElementById("search-hint").style.display =
+      document.getElementById("search-input").value.length >= 2 ? "none" : "block";
+  }
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function openSettings() {
+  previousScreen = currentTab;
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("settings-screen").classList.add("active");
+  document.getElementById("tabbar").style.display = "none";
+  renderSettings();
+}
+
+function renderSettings() {
+  const { language, country, ownedServices } = loadSettings();
+  document.getElementById("lang-select").value    = language;
+  document.getElementById("country-select").value = country;
+
+  const list = document.getElementById("service-list");
+  list.innerHTML = SERVICES.map(s => `
+    <div class="service-row">
+      <span class="service-name">${s.name}</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" ${ownedServices.has(s.id) ? "checked" : ""}
+          onchange="toggleService('${s.id}')">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  `).join("");
+}
+
+// ── Home navigation ────────────────────────────────────────────────────────
+function goHome() {
+  switchTab("search");
+  document.getElementById("search-input").value = "";
+  hideSuggestions();
+  document.getElementById("search-hint").style.display = "block";
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById("search-input");
+const suggestionsEl = document.getElementById("suggestions");
+const hintEl = document.getElementById("search-hint");
+
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (q.length < 2) {
+    hideSuggestions();
+    hintEl.style.display = "block";
+    return;
+  }
+  hintEl.style.display = "none";
+  const matches = Object.entries(MOCK).filter(([, d]) =>
+    d.title.toLowerCase().includes(q)
+  );
+  if (!matches.length) { hideSuggestions(); return; }
+  suggestionsEl.innerHTML = matches.map(([id, d]) => `
+    <div class="suggestion-row" onclick="openDetail('${id}')">
+      <div class="sug-thumb">${d.type === "movie" ? "🎬" : "📺"}</div>
+      <div class="sug-info">
+        <div class="sug-title">${d.title}</div>
+        <div class="sug-meta">${d.year ?? ""} · ${d.type === "movie" ? "Film" : "Serie"}</div>
+      </div>
+    </div>
+  `).join("");
+  suggestionsEl.classList.add("visible");
+});
+
+searchInput.addEventListener("blur", () => {
+  setTimeout(hideSuggestions, 150);
+});
+
+function hideSuggestions() {
+  suggestionsEl.classList.remove("visible");
+  suggestionsEl.innerHTML = "";
+}
+
+// ── Detail screen ──────────────────────────────────────────────────────────
+function openDetail(id) {
+  hideSuggestions();
+  const d = MOCK[id];
+  const { ownedServices } = loadSettings();
+  const configured = ownedServices.size > 0;
+  const owned = configured && d.services.some(s => ownedServices.has(s.id));
+
+  let badgeHtml = "";
+  if (configured) {
+    const cls   = owned ? "owned" : "not-owned";
+    const glyph = owned ? "✓" : "✗";
+    badgeHtml = `<div class="ownership-badge ${cls}">${glyph}</div>`;
+  }
+
+  const servicesHtml = d.services.map(s => `
+    <div class="service-badge">
+      <div class="service-dot" style="background:${s.color}"></div>
+      ${s.name}
+    </div>
+  `).join("");
+
+  const imdbHtml = d.imdb != null ? `
+    <div class="rating-card">
+      <div class="rating-emoji">⭐</div>
+      <div class="rating-score imdb-score">${d.imdb}/10</div>
+      <div class="rating-label">IMDb score</div>
+    </div>` : "";
+
+  const rtHtml = d.rt != null ? `
+    <div class="rating-card">
+      <div class="rating-emoji">🍅</div>
+      <div class="rating-score rt-score">${d.rt}%</div>
+      <div class="rating-label">Rotten Tomatoes</div>
+    </div>` : "";
+
+  document.getElementById("detail-screen").innerHTML = `
+    <div class="detail-hero">
+      <div class="hero-emoji">${d.type === "movie" ? "🎬" : "📺"}</div>
+      <div class="hero-gradient"></div>
+      <div class="hero-toprow">
+        <button class="hero-back-btn" onclick="closeDetail()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="hero-logo" onclick="goHome()">WaarStreamt.Het</div>
+        <button class="hero-settings-btn" onclick="openSettings()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+      ${badgeHtml}
+      <div class="hero-title-block">
+        <div class="hero-title">${d.title}</div>
+        <div class="hero-meta">${d.year ?? ""} · ${d.type === "movie" ? "Film" : "Serie"}</div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="section-label">Beschikbaar op</div>
+      <div class="services-row">${servicesHtml}</div>
+      <div class="body-divider"></div>
+      <div class="section-label">Over dit verhaal</div>
+      <div class="summary-text">${d.summary}</div>
+      <div class="body-divider"></div>
+      <div class="section-label">Beoordelingen</div>
+      <div class="ratings-row">${imdbHtml}${rtHtml}</div>
+    </div>
+  `;
+
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("detail-screen").classList.add("active");
+  document.getElementById("tabbar").style.display = "none";
+  previousScreen = currentTab;
+}
+
+function closeDetail() {
+  switchTab(previousScreen || "search");
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(function init() {
+  const { language, country } = loadSettings();
+  document.getElementById("lang-select").value    = language;
+  document.getElementById("country-select").value = country;
+})();
+</script>
+</body>
+</html>
